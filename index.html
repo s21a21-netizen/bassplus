@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Bass Vibe App</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 50px; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 5px; border: none; }
+        #status { margin-top: 20px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>🎵 Bass Vibe Player 🎵</h1>
+    
+    <!-- ファイル名を大文字の BEHIND-THE-MASK.mp3 に修正したよ -->
+    <audio id="audio" src="BEHIND-THE-MASK.mp3" controls crossorigin="anonymous"></audio>
+    <br><br>
+    
+    <button id="start-btn">アプリを起動する</button>
+    <div id="status">ステータス: 待機中</div>
+
+    <script>
+        const audio = document.getElementById('audio');
+        const startBtn = document.getElementById('start-btn');
+        const statusDiv = document.getElementById('status');
+
+        let audioContext, analyser, dataArray;
+        let isRunning = false;
+
+        // ① ボタンを押してオーディオを開始
+        startBtn.addEventListener('click', () => {
+            if (isRunning) return;
+            
+            try {
+                setupAudio();
+                statusDiv.innerText = "準備完了！重低音（ビート）に合わせて振動するよ。";
+                isRunning = true;
+                
+                // 解析ループスタート
+                updateVibe();
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "オーディオの初期化に失敗しました。";
+            }
+        });
+
+        // ② 音楽解析のセットアップ
+        function setupAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(audio);
+            analyser = audioContext.createAnalyser();
+            
+            analyser.fftSize = 256; 
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
+
+        // ③ 低音（ビート）に合わせて震えさせるメインループ
+        function updateVibe() {
+            requestAnimationFrame(updateVibe);
+
+            if (!analyser) return;
+
+            // 現在の周波数データを取得
+            analyser.getByteFrequencyData(dataArray);
+
+            // 低音の強さを計算（インデックス0〜2の平均）
+            const bassVolume = (dataArray[0] + dataArray[1] + dataArray[2]) / 3;
+
+            // しきい値（曲の低音に合わせて100に設定）
+            const threshold = 100; 
+
+            // 低音がしきい値を超えて、かつスマホが振動に対応している場合
+            if (bassVolume > threshold && navigator.vibrate) {
+                navigator.vibrate(40); 
+            }
+        }
+    </script>
+</body>
+</html>
