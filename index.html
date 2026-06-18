@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Flash Player</title>
+    <title>Music Bass Flash Player</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 30px; }
         button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 5px; border: none; background: #00bcd4; color: white; font-weight: bold; }
         #status { margin-top: 20px; color: #aaa; font-size: 14px; }
-        /* カメラの映像を隠すための設定 */
         video { display: none; }
     </style>
 </head>
 <body>
 
-    <h1>🎵 Music Flash Player 🎵</h1>
+    <h1>🎵 Bass Flash Player 🎵</h1>
     
     <audio id="audio" src="BEHIND-THE-MASK.mp3" controls crossorigin="anonymous"></audio>
     <br><br>
@@ -40,7 +39,6 @@
             try {
                 statusDiv.innerText = "カメラの準備中...（許可ポップアップが出たらOKを押してね）";
 
-                // iPhoneの背面カメラとライトを起動する設定
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { exact: "environment" } },
                     audio: false
@@ -49,13 +47,11 @@
                 video.srcObject = stream;
                 videoTrack = stream.getVideoTracks()[0];
                 
-                // オーディオ解析の初期化
                 setupAudio();
                 
-                statusDiv.innerText = "準備完了！音楽を再生するとライトが光るよ！";
+                statusDiv.innerText = "準備完了！重低音（ビート）に合わせてライトが光るよ！";
                 isRunning = true;
                 
-                // ループ処理スタート
                 updateFlash();
             } catch (err) {
                 console.error(err);
@@ -63,12 +59,14 @@
             }
         });
 
+        // ② 音楽解析のセットアップ（低音をきれいに切り分ける設定）
         function setupAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaElementSource(audio);
             analyser = audioContext.createAnalyser();
             
-            analyser.fftSize = 64; 
+            // fftSizeを256にして、音をより細かく分析できるようにしたよ
+            analyser.fftSize = 256; 
             const bufferLength = analyser.frequencyBinCount;
             dataArray = new Uint8Array(bufferLength);
 
@@ -76,31 +74,32 @@
             analyser.connect(audioContext.destination);
         }
 
+        // ③ ベースの音だけに反応させるメインループ
         async function updateFlash() {
             requestAnimationFrame(updateFlash);
 
             if (!analyser || !videoTrack) return;
 
-            // 音量データを取得して平均値を出す
+            // 現在の周波数データを取得
             analyser.getByteFrequencyData(dataArray);
-            let total = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                total += dataArray[i];
-            }
-            const averageVolume = total / dataArray.length;
 
-            // しきい値（敏感に反応するように35に設定）
-            const threshold = 35; 
+            // 【ベース認識！】データの最初の方（インデックス0〜2）が一番低い重低音だよ
+            // ここだけを取り出して平均を計算するよ
+            const bassVolume = (dataArray[0] + dataArray[1] + dataArray[2]) / 3;
+
+            // 【低音用のしきい値】
+            // ビートの「ドン！」って瞬間だけ光るように、ちょっと高めの「110」に設定したよ！
+            // もしこれでも光りっぱなしなら130とかに上げて、逆に光らなければ80とかに下げてみてね。
+            const threshold = 110; 
 
             try {
-                // iPhone/Android共通のライトON/OFF命令
-                if (averageVolume > threshold) {
+                if (bassVolume > threshold) {
                     await videoTrack.applyConstraints({ advanced: [{ torch: true }] });
                 } else {
                     await videoTrack.applyConstraints({ advanced: [{ torch: false }] });
                 }
             } catch (e) {
-                // エラーが出ても止まらないようにする
+                // エラー回避
             }
         }
     </script>
