@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Bass Vibe App</title>
+    <title>Super Sensitive Music Vibe</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 50px; }
         button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 5px; border: none; }
@@ -12,9 +12,8 @@
 </head>
 <body>
 
-    <h1>🎵 Bass Vibe Player 🎵</h1>
+    <h1>🎵 超敏感 Vibe Player 🎵</h1>
     
-    <!-- ファイル名を大文字の BEHIND-THE-MASK.mp3 に修正したよ -->
     <audio id="audio" src="BEHIND-THE-MASK.mp3" controls crossorigin="anonymous"></audio>
     <br><br>
     
@@ -29,16 +28,13 @@
         let audioContext, analyser, dataArray;
         let isRunning = false;
 
-        // ① ボタンを押してオーディオを開始
         startBtn.addEventListener('click', () => {
             if (isRunning) return;
             
             try {
                 setupAudio();
-                statusDiv.innerText = "準備完了！重低音（ビート）に合わせて振動するよ。";
+                statusDiv.innerText = "準備完了！超敏感モードで振動するよ。";
                 isRunning = true;
-                
-                // 解析ループスタート
                 updateVibe();
             } catch (err) {
                 console.error(err);
@@ -46,13 +42,13 @@
             }
         });
 
-        // ② 音楽解析のセットアップ
         function setupAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaElementSource(audio);
             analyser = audioContext.createAnalyser();
             
-            analyser.fftSize = 256; 
+            // 64にして、大雑把だけど素早く音量をキャッチできるようにするよ
+            analyser.fftSize = 64; 
             const bufferLength = analyser.frequencyBinCount;
             dataArray = new Uint8Array(bufferLength);
 
@@ -60,24 +56,28 @@
             analyser.connect(audioContext.destination);
         }
 
-        // ③ 低音（ビート）に合わせて震えさせるメインループ
         function updateVibe() {
             requestAnimationFrame(updateVibe);
 
             if (!analyser) return;
 
-            // 現在の周波数データを取得
+            // 全体の音量データを取得
             analyser.getByteFrequencyData(dataArray);
 
-            // 低音の強さを計算（インデックス0〜2の平均）
-            const bassVolume = (dataArray[0] + dataArray[1] + dataArray[2]) / 3;
+            // 全体の平均音量を計算
+            let total = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                total += dataArray[i];
+            }
+            const averageVolume = total / dataArray.length;
 
-            // しきい値（曲の低音に合わせて100に設定）
-            const threshold = 100; 
+            // 【超敏感設定】しきい値を30まで下げたよ！
+            const threshold = 30; 
 
-            // 低音がしきい値を超えて、かつスマホが振動に対応している場合
-            if (bassVolume > threshold && navigator.vibrate) {
-                navigator.vibrate(40); 
+            // 音が少しでも鳴っていて、かつスマホが振動に対応している場合
+            if (averageVolume > threshold && navigator.vibrate) {
+                // 30ミリ秒だけ細かく震わせる（連続でブブブブッと震えるよ）
+                navigator.vibrate(30); 
             }
         }
     </script>
