@@ -3,83 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Sensitive Music Vibe</title>
+    <title>Vibe API Test</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 50px; }
-        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 5px; border: none; }
-        #status { margin-top: 20px; color: #aaa; }
+        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 100px; }
+        button { padding: 30px 60px; font-size: 24px; font-bold: true; cursor: pointer; border-radius: 10px; background: #ff4757; color: white; border: none; }
     </style>
 </head>
 <body>
 
-    <h1>🎵 超敏感 Vibe Player 🎵</h1>
-    
-    <audio id="audio" src="BEHIND-THE-MASK.mp3" controls crossorigin="anonymous"></audio>
+    <h1>🚨 API 生存確認テスト 🚨</h1>
     <br><br>
     
-    <button id="start-btn">アプリを起動する</button>
-    <div id="status">ステータス: 待機中</div>
+    <button id="test-btn">ここを押すと1秒震えるはず！</button>
 
     <script>
-        const audio = document.getElementById('audio');
-        const startBtn = document.getElementById('start-btn');
-        const statusDiv = document.getElementById('status');
-
-        let audioContext, analyser, dataArray;
-        let isRunning = false;
-
-        startBtn.addEventListener('click', () => {
-            if (isRunning) return;
-            
-            try {
-                setupAudio();
-                statusDiv.innerText = "準備完了！超敏感モードで振動するよ。";
-                isRunning = true;
-                updateVibe();
-            } catch (err) {
-                console.error(err);
-                statusDiv.innerText = "オーディオの初期化に失敗しました。";
+        document.getElementById('test-btn').addEventListener('click', () => {
+            if (navigator.vibrate) {
+                // 強制的に1秒（1000ミリ秒）震わせる指令
+                navigator.vibrate(1000);
+                alert("APIの命令は送ったよ！震えた？");
+            } else {
+                alert("ショック！このブラウザはバイブ機能に完全非対応です。");
             }
         });
-
-        function setupAudio() {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaElementSource(audio);
-            analyser = audioContext.createAnalyser();
-            
-            // 64にして、大雑把だけど素早く音量をキャッチできるようにするよ
-            analyser.fftSize = 64; 
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
-        }
-
-        function updateVibe() {
-            requestAnimationFrame(updateVibe);
-
-            if (!analyser) return;
-
-            // 全体の音量データを取得
-            analyser.getByteFrequencyData(dataArray);
-
-            // 全体の平均音量を計算
-            let total = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                total += dataArray[i];
-            }
-            const averageVolume = total / dataArray.length;
-
-            // 【超敏感設定】しきい値を30まで下げたよ！
-            const threshold = 30; 
-
-            // 音が少しでも鳴っていて、かつスマホが振動に対応している場合
-            if (averageVolume > threshold && navigator.vibrate) {
-                // 30ミリ秒だけ細かく震わせる（連続でブブブブッと震えるよ）
-                navigator.vibrate(30); 
-            }
-        }
     </script>
 </body>
 </html>
