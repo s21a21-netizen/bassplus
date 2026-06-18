@@ -3,29 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe API Test</title>
+    <title>Music Flash Player</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 100px; }
-        button { padding: 30px 60px; font-size: 24px; font-bold: true; cursor: pointer; border-radius: 10px; background: #ff4757; color: white; border: none; }
+        body { font-family: sans-serif; text-align: center; background: #222; color: #fff; padding-top: 30px; }
+        button { padding: 15px 30px; font-size: 18px; margin: 10px; cursor: pointer; border-radius: 5px; border: none; background: #00bcd4; color: white; font-weight: bold; }
+        #status { margin-top: 20px; color: #aaa; font-size: 14px; }
+        /* カメラの映像を隠すための設定 */
+        video { display: none; }
     </style>
 </head>
 <body>
 
-    <h1>🚨 API 生存確認テスト 🚨</h1>
+    <h1>🎵 Music Flash Player 🎵</h1>
+    
+    <audio id="audio" src="BEHIND-THE-MASK.mp3" controls crossorigin="anonymous"></audio>
     <br><br>
     
-    <button id="test-btn">ここを押すと1秒震えるはず！</button>
+    <button id="start-btn">アプリを起動してライトを許可</button>
+    <div id="status">ステータス: 待機中</div>
+
+    <video id="video" autoplay playsinline></video>
 
     <script>
-        document.getElementById('test-btn').addEventListener('click', () => {
-            if (navigator.vibrate) {
-                // 強制的に1秒（1000ミリ秒）震わせる指令
-                navigator.vibrate(1000);
-                alert("APIの命令は送ったよ！震えた？");
-            } else {
-                alert("ショック！このブラウザはバイブ機能に完全非対応です。");
+        const audio = document.getElementById('audio');
+        const startBtn = document.getElementById('start-btn');
+        const statusDiv = document.getElementById('status');
+        const video = document.getElementById('video');
+
+        let audioContext, analyser, dataArray;
+        let videoTrack = null;
+        let isRunning = false;
+
+        startBtn.addEventListener('click', async () => {
+            if (isRunning) return;
+            
+            try {
+                statusDiv.innerText = "カメラの準備中...（許可ポップアップが出たらOKを押してね）";
+
+                // iPhoneの背面カメラとライトを起動する設定
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                
+                // オーディオ解析の初期化
+                setupAudio();
+                
+                statusDiv.innerText = "準備完了！音楽を再生するとライトが光るよ！";
+                isRunning = true;
+                
+                // ループ処理スタート
+                updateFlash();
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "エラー: カメラの許可がないか、対応していない機種です。";
             }
         });
+
+        function setupAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(audio);
+            analyser = audioContext.createAnalyser();
+            
+            analyser.fftSize = 64; 
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
+
+        async function updateFlash() {
+            requestAnimationFrame(updateFlash);
+
+            if (!analyser || !videoTrack) return;
+
+            // 音量データを取得して平均値を出す
+            analyser.getByteFrequencyData(dataArray);
+            let total = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                total += dataArray[i];
+            }
+            const averageVolume = total / dataArray.length;
+
+            // しきい値（敏感に反応するように35に設定）
+            const threshold = 35; 
+
+            try {
+                // iPhone/Android共通のライトON/OFF命令
+                if (averageVolume > threshold) {
+                    await videoTrack.applyConstraints({ advanced: [{ torch: true }] });
+                } else {
+                    await videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+                }
+            } catch (e) {
+                // エラーが出ても止まらないようにする
+            }
+        }
     </script>
 </body>
 </html>
